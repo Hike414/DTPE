@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	utls "github.com/refraction-networking/utls"
@@ -16,10 +19,14 @@ import (
 
 // Profile represents a browser profile with TLS and HTTP settings
 type Profile struct {
-	Name        string            `json:"name"`
-	UserAgent   string            `json:"user_agent"`
-	Headers     map[string]string `json:"headers"`
-	TLSSettings *TLSSettings      `json:"tls_settings,omitempty"`
+	Name            string            `json:"name"`
+	UserAgent       string            `json:"user_agent"`
+	Headers         map[string]string `json:"headers"`
+	TLSSettings     *TLSSettings      `json:"tls_settings,omitempty"`
+	ScreenResolution string           `json:"screen_resolution,omitempty"`
+	Timezone        string            `json:"timezone,omitempty"`
+	WebGLVendor     string            `json:"webgl_vendor,omitempty"`
+	Platform        string            `json:"platform,omitempty"`
 }
 
 // TLSSettings defines the TLS configuration for a profile
@@ -128,30 +135,65 @@ func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // NewBrowserClient creates a new BrowserClient with the given profile
 func NewBrowserClient(profile *Profile) (*BrowserClient, error) {
-	client := &BrowserClient{
+	// Create a custom transport with our TLS settings
+	transport := &http.Transport{
+		TLSHandshakeTimeout: 30 * time.Second,
+		// Disable HTTP/2
+		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+		// Set reasonable timeouts
+		ResponseHeaderTimeout: 30 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
+	}
+
+	// Create a new HTTP client with our custom transport
+	client := &http.Client{
+		Transport: transport,
+		// Set a reasonable timeout
+		Timeout: 60 * time.Second,
+	}
+
+	// Create our browser client
+	browserClient := &BrowserClient{
+		Client:  client,
 		Profile: profile,
 	}
 
-	// Set up TLS configuration
-	if err := client.SetTLSConfig(); err != nil {
-		return nil, fmt.Errorf("failed to set TLS config: %v", err)
+	// Apply TLS settings if provided
+	if profile.TLSSettings != nil {
+		if err := browserClient.SetTLSConfig(); err != nil {
+			return nil, fmt.Errorf("failed to set TLS config: %v", err)
+		}
 	}
 
-	// Create HTTP client with custom transport
-	client.Client = &http.Client{
-		Transport: &customTransport{
-			tlsConfig: client.tlsConfig,
-			profile:   profile,
-			debug:     true, // Enable debug logging
-		},
-		Timeout: 30 * time.Second,
-		// Disable automatic redirects to handle them manually
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
+	// Set default headers if not provided
+	if profile.Headers == nil {
+		profile.Headers = make(map[string]string)
 	}
 
-	return client, nil
+	// Ensure User-Agent is set in headers if not already
+	if _, ok := profile.Headers["User-Agent"]; !ok && profile.UserAgent != "" {
+		profile.Headers["User-Agent"] = profile.UserAgent
+	}
+
+	// Add additional headers based on profile
+	if profile.Platform != "" {
+		profile.Headers["Sec-Ch-Ua-Platform"] = fmt.Sprintf(`"%s"`, profile.Platform)
+	}
+
+	// Set default accept headers if not provided
+	if _, ok := profile.Headers["Accept"]; !ok {
+		profile.Headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+	}
+
+	if _, ok := profile.Headers["Accept-Language"]; !ok {
+		profile.Headers["Accept-Language"] = "en-US,en;q=0.9"
+	}
+
+	if _, ok := profile.Headers["Accept-Encoding"]; !ok {
+		profile.Headers["Accept-Encoding"] = "gzip, deflate, br"
+	}
+
+	return browserClient, nil
 }
 
 // SetTLSConfig applies TLS settings from the profile
@@ -176,6 +218,50 @@ func (c *BrowserClient) SetTLSConfig() error {
 	return nil
 }
 
+// Do sends an HTTP request and returns an HTTP response
+func (c *BrowserClient) Do(req *http.Request) (*http.Response, error) {
+	// Create a copy of the request to avoid modifying the original
+	req = req.Clone(req.Context())
+
+	// Set headers from profile
+	for key, value := range c.Profile.Headers {
+		if req.Header.Get(key) == "" {
+			req.Header.Set(key, value)
+		}
+	}
+
+	// Ensure User-Agent is set
+	if req.Header.Get("User-Agent") == "" && c.Profile.UserAgent != "" {
+		req.Header.Set("User-Agent", c.Profile.UserAgent)
+	}
+
+	// Add additional headers based on profile
+	if c.Profile.Platform != "" && req.Header.Get("Sec-Ch-Ua-Platform") == "" {
+		req.Header.Set("Sec-Ch-Ua-Platform", fmt.Sprintf(`"%s"`, c.Profile.Platform))
+	}
+
+	// Add screen resolution if available
+	if c.Profile.ScreenResolution != "" && req.Header.Get("X-Screen-Resolution") == "" {
+		req.Header.Set("X-Screen-Resolution", c.Profile.ScreenResolution)
+	}
+
+	// Force HTTP/1.1
+	req.Proto = "HTTP/1.1"
+	req.ProtoMajor = 1
+	req.ProtoMinor = 1
+
+	// Log request details for debugging
+	log.Printf("Sending %s request to %s with headers: %+v", req.Method, req.URL, req.Header)
+
+	// Execute the request
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %v", err)
+	}
+
+	return resp, nil
+}
+
 // Helper function to convert TLS version numbers to strings
 func versionToString(version uint16) string {
 	switch version {
@@ -192,38 +278,120 @@ func versionToString(version uint16) string {
 	}
 }
 
-// Do sends an HTTP request and returns an HTTP response
-func (c *BrowserClient) Do(req *http.Request) (*http.Response, error) {
-	// Log request details
-	log.Printf("Sending %s request to %s", req.Method, req.URL.String())
-	log.Printf("Headers: %+v", req.Header)
+// ProfileManager manages browser profiles and rotation
+type ProfileManager struct {
+	profiles    map[string]*Profile
+	profileKeys []string
+	currentIdx  int
+	mu          sync.Mutex
+}
 
-	// Make the request using the custom transport
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %v", err)
+// NewProfileManager creates a new ProfileManager with the given profiles
+func NewProfileManager(profiles []*Profile) *ProfileManager {
+	pm := &ProfileManager{
+		profiles:    make(map[string]*Profile),
+		profileKeys: make([]string, 0, len(profiles)),
+		currentIdx:  0,
 	}
 
-	// Log response details
-	log.Printf("Received %d %s from %s", resp.StatusCode, resp.Proto, req.URL.Host)
-	log.Printf("Response headers: %+v", resp.Header)
+	for _, profile := range profiles {
+		pm.profiles[profile.Name] = profile
+		pm.profileKeys = append(pm.profileKeys, profile.Name)
+	}
 
-	return resp, nil
+	// Shuffle the profile keys for random rotation
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(pm.profileKeys), func(i, j int) {
+		pm.profileKeys[i], pm.profileKeys[j] = pm.profileKeys[j], pm.profileKeys[i]
+	})
+
+	return pm
+}
+
+// GetProfile returns a profile by name
+func (pm *ProfileManager) GetProfile(name string) (*Profile, bool) {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	profile, exists := pm.profiles[name]
+	return profile, exists
+}
+
+// GetNextProfile returns the next profile in rotation
+func (pm *ProfileManager) GetNextProfile() *Profile {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	if len(pm.profileKeys) == 0 {
+		return nil
+	}
+
+	// Get the current profile
+	profileName := pm.profileKeys[pm.currentIdx]
+	profile := pm.profiles[profileName]
+
+	// Move to the next profile
+	pm.currentIdx = (pm.currentIdx + 1) % len(pm.profileKeys)
+
+	// If we've gone through all profiles, reshuffle for next time
+	if pm.currentIdx == 0 {
+		rand.Shuffle(len(pm.profileKeys), func(i, j int) {
+			pm.profileKeys[i], pm.profileKeys[j] = pm.profileKeys[j], pm.profileKeys[i]
+		})
+	}
+
+	return profile
+}
+
+// GetRandomProfile returns a random profile
+func (pm *ProfileManager) GetRandomProfile() *Profile {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	if len(pm.profileKeys) == 0 {
+		return nil
+	}
+
+	idx := rand.Intn(len(pm.profileKeys))
+	return pm.profiles[pm.profileKeys[idx]]
+}
+
+// GetProfiles returns all available profiles
+func (pm *ProfileManager) GetProfiles() []*Profile {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	profiles := make([]*Profile, 0, len(pm.profiles))
+	for _, name := range pm.profileKeys {
+		profiles = append(profiles, pm.profiles[name])
+	}
+	return profiles
 }
 
 // LoadProfiles loads browser profiles from a JSON file
-func LoadProfiles(filename string) ([]*Profile, error) {
+func LoadProfiles(filename string) (*ProfileManager, error) {
+	// Read the file
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("error reading profiles file: %v", err)
+		return nil, fmt.Errorf("failed to read profiles file: %v", err)
 	}
 
-	var profiles []*Profile
-	if err := json.Unmarshal(data, &profiles); err != nil {
-		return nil, fmt.Errorf("error parsing profiles: %v", err)
+	// Parse the JSON data into a map
+	var profilesMap map[string]*Profile
+	if err := json.Unmarshal(data, &profilesMap); err != nil {
+		return nil, fmt.Errorf("failed to parse profiles: %v", err)
 	}
 
-	return profiles, nil
+	// Convert the map to a slice
+	profiles := make([]*Profile, 0, len(profilesMap))
+	for name, profile := range profilesMap {
+		// Ensure the name is set
+		profile.Name = name
+		profiles = append(profiles, profile)
+	}
+
+	// Create a new profile manager
+	return NewProfileManager(profiles), nil
 }
 
 // ChromeProfile returns a Chrome browser profile
@@ -325,28 +493,63 @@ func (s safeSubstring) Substring(start, end int) string {
 }
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	log.Println("Starting DTPE Go client...")
+	// Load profiles from file
+	profileManager, err := LoadProfiles("profiles.json")
+	if err != nil {
+		log.Fatalf("Failed to load profiles: %v", err)
+	}
 
-	// Example usage
-	profile := ChromeProfile()
-	log.Printf("Created profile: %s", profile.Name)
+	// Get all available profiles
+	profiles := profileManager.GetProfiles()
+	if len(profiles) == 0 {
+		log.Fatal("No profiles found")
+	}
 
+	// Display available profiles
+	log.Println("Available profiles:")
+	for i, p := range profiles {
+		log.Printf("%d. %s (%s)", i+1, p.Name, p.UserAgent)
+	}
+	log.Println()
+
+	// Test with each profile sequentially
+	log.Println("=== Testing with each profile sequentially ===")
+	for _, profile := range profiles {
+		testWithProfile(profile, "https://httpbin.org/headers")
+		time.Sleep(2 * time.Second) // Add delay between profile tests
+	}
+
+	// Test with profile rotation
+	log.Println("\n=== Testing with profile rotation ===")
+	for i := 0; i < 3; i++ {
+		profile := profileManager.GetNextProfile()
+		log.Printf("\n--- Using profile: %s (rotation %d) ---", profile.Name, i+1)
+		testWithProfile(profile, "https://httpbin.org/headers")
+		time.Sleep(2 * time.Second)
+	}
+
+	// Test with random profile selection
+	log.Println("\n=== Testing with random profile selection ===")
+	for i := 0; i < 3; i++ {
+		profile := profileManager.GetRandomProfile()
+		log.Printf("\n--- Using random profile: %s (attempt %d) ---", profile.Name, i+1)
+		testWithProfile(profile, "https://httpbin.org/headers")
+		time.Sleep(2 * time.Second)
+	}
+}
+
+// testWithProfile creates a client with the given profile and tests it
+func testWithProfile(profile *Profile, url string) {
+	log.Printf("Testing with profile: %s", profile.Name)
+	log.Printf("User-Agent: %s", profile.UserAgent)
+
+	// Create a new browser client
 	client, err := NewBrowserClient(profile)
 	if err != nil {
-		log.Fatalf("Failed to create browser client: %v", err)
+		log.Printf("Failed to create browser client: %v", err)
+		return
 	}
 
-	// Test with different endpoints
-	testEndpoints := []string{
-		"https://httpbin.org/headers",
-		"https://httpbin.org/ip",
-		"https://httpbin.org/user-agent",
-	}
-
-	for _, endpoint := range testEndpoints {
-		testRequest(client, endpoint)
-	}
-
-	log.Println("All tests completed.")
+	// Test the client with the specified URL
+	testRequest(client, url)
 }

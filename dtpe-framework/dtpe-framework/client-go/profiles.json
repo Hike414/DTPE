@@ -1,75 +1,172 @@
-[
-  {
-    "name": "chrome_windows",
+{
+  "chrome_windows_desktop": {
+    "name": "chrome_windows_desktop",
     "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "headers": {
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Site": "none",
+      "Sec-Ch-Ua": "\"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\", \"Not-A.Brand\";v=\"99\"",
+      "Sec-Fetch-Dest": "document",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Sec-Ch-Ua-Platform": "\"Windows\"",
       "Accept-Language": "en-US,en;q=0.9",
-      "Accept-Encoding": "gzip, deflate, br"
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Cache-Control": "max-age=0"
     },
     "tls_settings": {
       "min_version": 771,
       "max_version": 772,
-      "cipher_suites": [
-        4865,
-        4866,
-        4867,
-        49195,
-        49199,
-        49196,
-        49200,
-        52393,
-        52392,
-        49171,
-        49172,
-        156,
-        157,
-        47,
-        53
-      ],
-      "curve_preferences": [
-        29,
-        23,
-        24
-      ],
+      "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+      "curve_preferences": [29, 23, 24],
       "session_tickets_disabled": false
-    }
+    },
+    "screen_resolution": "1920x1080",
+    "timezone": "America/New_York",
+    "webgl_vendor": "Google Inc. (NVIDIA)",
+    "platform": "Win32"
   },
-  {
-    "name": "safari_mac",
+  
+  "chrome_windows_mobile": {
+    "name": "chrome_windows_mobile",
+    "user_agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+    "headers": {
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Site": "none",
+      "Sec-Ch-Ua": "\"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\", \"Not-A.Brand\";v=\"99\"",
+      "Sec-Fetch-Dest": "document",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Sec-Ch-Ua-Mobile": "?1",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Ch-Ua-Platform": "\"Android\"",
+      "Cache-Control": "max-age=0"
+    },
+    "tls_settings": {
+      "min_version": 771,
+      "max_version": 772,
+      "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+      "curve_preferences": [29, 23, 24],
+      "session_tickets_disabled": false
+    },
+    "screen_resolution": "1080x2400",
+    "timezone": "America/Los_Angeles",
+    "webgl_vendor": "Qualcomm",
+    "platform": "Linux armv81"
+  },
+  
+  "safari_mac_desktop": {
+    "name": "safari_mac_desktop",
     "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
     "headers": {
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-Dest": "document",
       "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-GB,en;q=0.9",
       "Accept-Encoding": "gzip, deflate, br",
-      "Dnt": "1"
+      "Dnt": "1",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Sec-Fetch-Mode": "navigate",
+      "Cache-Control": "max-age=0"
     },
     "tls_settings": {
       "min_version": 771,
       "max_version": 772,
-      "cipher_suites": [
-        4865,
-        4866,
-        4867,
-        49195,
-        49199,
-        49196,
-        49200,
-        52393,
-        52392,
-        49171,
-        49172,
-        156,
-        157,
-        47,
-        53
-      ],
-      "curve_preferences": [
-        29,
-        23,
-        24
-      ],
+      "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+      "curve_preferences": [29, 23, 24],
       "session_tickets_disabled": false
-    }
+    },
+    "screen_resolution": "2560x1440",
+    "timezone": "America/Chicago",
+    "webgl_vendor": "Apple Inc.",
+    "platform": "MacIntel"
+  },
+  
+  "firefox_windows_desktop": {
+    "name": "firefox_windows_desktop",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+    "headers": {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Te": "trailers"
+    },
+    "tls_settings": {
+      "min_version": 771,
+      "max_version": 771,
+      "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+      "curve_preferences": [29, 23, 24],
+      "session_tickets_disabled": true
+    },
+    "screen_resolution": "1920x1080",
+    "timezone": "America/New_York",
+    "webgl_vendor": "Mozilla",
+    "platform": "Win32"
+  },
+  
+  "edge_windows_desktop": {
+    "name": "edge_windows_desktop",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+    "headers": {
+      "Sec-Fetch-User": "?1",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Site": "none",
+      "Sec-Ch-Ua": "\"Microsoft Edge\";v=\"120\", \"Not_A Brand\";v=\"99\", \"Chromium\";v=\"120\"",
+      "Sec-Fetch-Dest": "document",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Sec-Ch-Ua-Platform": "\"Windows\"",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Cache-Control": "max-age=0"
+    },
+    "tls_settings": {
+      "min_version": 771,
+      "max_version": 772,
+      "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+      "curve_preferences": [29, 23, 24],
+      "session_tickets_disabled": false
+    },
+    "screen_resolution": "1920x1080",
+    "timezone": "America/Chicago",
+    "webgl_vendor": "Google Inc. (NVIDIA)",
+    "platform": "Win32"
+  },
+  
+  "safari_ios_mobile": {
+    "name": "safari_ios_mobile",
+    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+    "headers": {
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-User": "?1",
+      "Sec-Fetch-Dest": "document",
+      "Upgrade-Insecure-Requests": "1"
+    },
+    "tls_settings": {
+      "min_version": 771,
+      "max_version": 772,
+      "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+      "curve_preferences": [29, 23, 24],
+      "session_tickets_disabled": false
+    },
+    "screen_resolution": "1170x2532",
+    "timezone": "America/Los_Angeles",
+    "webgl_vendor": "Apple Inc.",
+    "platform": "iPhone"
   }
-]
+}
